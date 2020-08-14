@@ -1,11 +1,15 @@
 /****************************************************************************/
 // Eclipse SUMO, Simulation of Urban MObility; see https://eclipse.org/sumo
-// Copyright (C) 2001-2019 German Aerospace Center (DLR) and others.
-// This program and the accompanying materials
-// are made available under the terms of the Eclipse Public License v2.0
-// which accompanies this distribution, and is available at
-// http://www.eclipse.org/legal/epl-v20.html
-// SPDX-License-Identifier: EPL-2.0
+// Copyright (C) 2001-2020 German Aerospace Center (DLR) and others.
+// This program and the accompanying materials are made available under the
+// terms of the Eclipse Public License 2.0 which is available at
+// https://www.eclipse.org/legal/epl-2.0/
+// This Source Code may also be made available under the following Secondary
+// Licenses when the conditions for such availability set forth in the Eclipse
+// Public License 2.0 are satisfied: GNU General Public License, version 2
+// or later which is available at
+// https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+// SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
 /****************************************************************************/
 /// @file    MSVehicleType.cpp
 /// @author  Christian Roessel
@@ -14,19 +18,12 @@
 /// @author  Thimor Bohn
 /// @author  Michael Behrisch
 /// @date    Tue, 06 Mar 2001
-/// @version $Id$
 ///
 // The car-following model and parameter
 /****************************************************************************/
-
-
-// ===========================================================================
-// included modules
-// ===========================================================================
 #include <config.h>
 
 #include <cassert>
-#include <utils/iodevices/BinaryInputDevice.h>
 #include <utils/options/OptionsCont.h>
 #include <utils/common/FileHelpers.h>
 #include <utils/common/RandHelper.h>
@@ -44,6 +41,7 @@
 #include "cfmodels/MSCFModel_Daniel1.h"
 #include "cfmodels/MSCFModel_PWag2009.h"
 #include "cfmodels/MSCFModel_Wiedemann.h"
+#include "cfmodels/MSCFModel_W99.h"
 #include "cfmodels/MSCFModel_ACC.h"
 #include "cfmodels/MSCFModel_CACC.h"
 #include "MSVehicleControl.h"
@@ -60,8 +58,13 @@ int MSVehicleType::myNextIndex = 0;
 // ===========================================================================
 // method definitions
 // ===========================================================================
-MSVehicleType::MSVehicleType(const SUMOVTypeParameter& parameter)
-    : myParameter(parameter), myWarnedActionStepLengthTauOnce(false), myIndex(myNextIndex++), myCarFollowModel(nullptr), myOriginalType(nullptr) {
+MSVehicleType::MSVehicleType(const SUMOVTypeParameter& parameter) :
+    myParameter(parameter),
+    myWarnedActionStepLengthTauOnce(false),
+    myWarnedActionStepLengthBallisticOnce(false),
+    myIndex(myNextIndex++),
+    myCarFollowModel(nullptr),
+    myOriginalType(nullptr) {
     assert(getLength() > 0);
     assert(getMaxSpeed() > 0);
 
@@ -323,6 +326,9 @@ MSVehicleType::build(SUMOVTypeParameter& from) {
         case SUMO_TAG_CF_WIEDEMANN:
             vtype->myCarFollowModel = new MSCFModel_Wiedemann(vtype);
             break;
+        case SUMO_TAG_CF_W99:
+            vtype->myCarFollowModel = new MSCFModel_W99(vtype);
+            break;
         case SUMO_TAG_CF_RAIL:
             vtype->myCarFollowModel = new MSCFModel_Rail(vtype);
             break;
@@ -340,12 +346,21 @@ MSVehicleType::build(SUMOVTypeParameter& from) {
             vtype->myCarFollowModel = new MSCFModel_Krauss(vtype);
             break;
     }
-    // init further param values
-    vtype->initParameters();
+    // init Rail visualization parameters
+    vtype->initRailVisualizationParameters();
     vtype->check();
     return vtype;
 }
 
+SUMOTime
+MSVehicleType::getEntryManoeuvreTime(const int angle) const {
+    return (getParameter().getEntryManoeuvreTime(angle));
+}
+
+SUMOTime
+MSVehicleType::getExitManoeuvreTime(const int angle) const {
+    return (getParameter().getExitManoeuvreTime(angle));
+}
 
 MSVehicleType*
 MSVehicleType::buildSingularType(const std::string& id) const {
@@ -379,6 +394,20 @@ MSVehicleType::check() {
           << "' is larger than its parameter tau (=" << getCarFollowModel().getHeadwayTime() << ")!"
           << " This may lead to collisions. (This warning is only issued once per vehicle type).";
         WRITE_WARNING(s.str());
+    }
+    if (!myWarnedActionStepLengthBallisticOnce
+            && myParameter.actionStepLength != DELTA_T
+            && MSGlobals::gSemiImplicitEulerUpdate) {
+        myWarnedActionStepLengthBallisticOnce = true;
+        std::string warning2;
+        if (OptionsCont::getOptions().isDefault("step-method.ballistic")) {
+            warning2 = " Setting it now to avoid collisions.";
+            MSGlobals::gSemiImplicitEulerUpdate = false;
+        } else {
+            warning2 = " This may cause collisions.";
+        }
+        WRITE_WARNINGF("Action step length '%' is used for vehicle type '%' but step-method.ballistic was not set." + warning2
+                       , STEPS2TIME(myParameter.actionStepLength), getID())
     }
 }
 
@@ -438,7 +467,7 @@ MSVehicleType::setTau(double tau) {
 
 
 void
-MSVehicleType::initParameters() {
+MSVehicleType::initRailVisualizationParameters() {
     if (myParameter.knowsParameter("carriageLength")) {
         myParameter.carriageLength = StringUtils::toDouble(myParameter.getParameter("carriageLength"));
     } else if (myParameter.wasSet(VTYPEPARS_SHAPE_SET)) {
@@ -480,5 +509,5 @@ MSVehicleType::initParameters() {
     }
 }
 
-/****************************************************************************/
 
+/****************************************************************************/

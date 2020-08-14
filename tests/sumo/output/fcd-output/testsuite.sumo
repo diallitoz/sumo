@@ -14,6 +14,21 @@ signals
 
 # test angle output in all cardinal directions
 angle
+
+# test kilometrage output
+distance
+
+# test kilometrage output
+distance_reverse
+
+# test acceleration output
+acceleration
+
+# write additional parameters
+params
+
+# test caccVehicleMode parameter for CACC CFModel
+params_caccVehicleMode
 subsecond
 
 # output not in every time step
@@ -21,6 +36,9 @@ period
 
 # output not from every vehicle
 explicit_assignment
+
+# output in range around equipped vehicles
+radius
 
 # disable output for all vehicles via option
 disable_all

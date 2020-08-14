@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on Thu Mar 14 15:50:38 2019 by Eclipse SUMO od2trips Version v1_1_0+0435-678c69824b
+<!-- generated on Sat Aug  8 12:26:01 2020 by Eclipse SUMO od2trips Version v1_6_0+1462-a775417066
 -->
 
 <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/od2tripsConfiguration.xsd">
@@ -66,6 +66,9 @@
         <!-- Writes persontrips instead of vehicles -->
         <persontrips value="false" type="BOOL"/>
 
+        <!-- Add modes attribute to personTrips -->
+        <persontrips.modes value="" type="STR[]"/>
+
         <!-- Does not save vtype information -->
         <ignore-vehicle-type value="false" synonymes="no-vtype" type="BOOL"/>
 
@@ -96,8 +99,8 @@
         <!-- Defines the prefix for vehicle names -->
         <prefix value="" type="STR"/>
 
-        <!-- Uses STR as a timeline definition -->
-        <timeline value="" type="STR"/>
+        <!-- Uses STR[] as a timeline definition -->
+        <timeline value="" type="STR[]"/>
 
         <!-- Uses STR as a 24h-timeline definition -->
         <timeline.day-in-hours value="false" type="BOOL"/>
@@ -144,11 +147,11 @@
         <!-- Set schema validation scheme of XML inputs (&quot;never&quot;, &quot;auto&quot; or &quot;always&quot;) -->
         <xml-validation value="auto" synonymes="X" type="STR"/>
 
-        <!-- Set schema validation scheme of SUMO network inputs (&quot;never&quot;, &quot;auto&quot; or &quot;always&quot;) -->
-        <xml-validation.net value="never" type="STR"/>
-
         <!-- Disables output of warnings -->
         <no-warnings value="false" synonymes="W suppress-warnings" type="BOOL"/>
+
+        <!-- Aggregate warnings of the same type whenever more than INT occur -->
+        <aggregate-warnings value="-1" type="INT"/>
 
         <!-- Writes all messages to FILE (implies verbose) -->
         <log value="" synonymes="l log-file" type="FILE"/>

@@ -1,16 +1,19 @@
 #!/usr/bin/env python
 # Eclipse SUMO, Simulation of Urban MObility; see https://eclipse.org/sumo
-# Copyright (C) 2010-2019 German Aerospace Center (DLR) and others.
-# This program and the accompanying materials
-# are made available under the terms of the Eclipse Public License v2.0
-# which accompanies this distribution, and is available at
-# http://www.eclipse.org/legal/epl-v20.html
-# SPDX-License-Identifier: EPL-2.0
+# Copyright (C) 2010-2020 German Aerospace Center (DLR) and others.
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License 2.0 which is available at
+# https://www.eclipse.org/legal/epl-2.0/
+# This Source Code may also be made available under the following Secondary
+# Licenses when the conditions for such availability set forth in the Eclipse
+# Public License 2.0 are satisfied: GNU General Public License, version 2
+# or later which is available at
+# https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+# SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
 
 # @file    randomRides.py
 # @author  Jakob Erdmann
 # @date    2019-02-24
-# @version $Id$
 
 from __future__ import print_function
 from __future__ import absolute_import
@@ -44,9 +47,8 @@ def get_options(args=None):
     optParser.add_option("--poi-offset", dest="poiOffset", type="float",
                          default=12, help="offset of stop-poi from the lane in m")
     optParser.add_option("--initial-duration", dest="duration", type="int", default=5, help="inital stop duration in s")
-    optParser.add_option(
-        "-p", "--period", type="float", default=1, help="Generate vehicles with equidistant departure times and " +
-        "period=FLOAT (default 1.0). If option --binomial is used, the expected arrival rate is set to 1/period.")
+    optParser.add_option("-p", "--period", type="float", default=1,
+                         help="Generate vehicles with equidistant departure times and period=FLOAT (default 1.0).")
     optParser.add_option("-s", "--seed", type="int", help="random seed")
     optParser.add_option("--min-distance", type="float", dest="min_distance",
                          default=0.0, help="require start and end edges for each trip to be at least <FLOAT> m apart")
@@ -88,8 +90,8 @@ def main(options):
                 offset = (float(bs.startPos) + float(bs.endPos)) / 2
                 x, y = sumolib.geomhelper.positionAtShapeOffset(sideShape, offset)
                 stopColors[bs.id] = colorgen()
-                outf.write('    <poi id="%s" x="%s" y="%s" color="%s"/>\n' % (
-                    bs.id, x, y, stopColors[bs.id]))
+                outf.write('    <poi id="%s" x="%s" y="%s" color="%s" type="%s"/>\n' % (
+                    bs.id, x, y, stopColors[bs.id], bs.attr_name))
             outf.write('</additional>\n')
 
     if len(busStops) < 2:

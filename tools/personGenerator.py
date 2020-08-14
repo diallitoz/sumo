@@ -1,16 +1,19 @@
 #!/usr/bin/env python
 # Eclipse SUMO, Simulation of Urban MObility; see https://eclipse.org/sumo
-# Copyright (C) 2019-2019 German Aerospace Center (DLR) and others.
-# This program and the accompanying materials
-# are made available under the terms of the Eclipse Public License v2.0
-# which accompanies this distribution, and is available at
-# http://www.eclipse.org/legal/epl-v20.html
-# SPDX-License-Identifier: EPL-2.0
+# Copyright (C) 2019-2020 German Aerospace Center (DLR) and others.
+# This program and the accompanying materials are made available under the
+# terms of the Eclipse Public License 2.0 which is available at
+# https://www.eclipse.org/legal/epl-2.0/
+# This Source Code may also be made available under the following Secondary
+# Licenses when the conditions for such availability set forth in the Eclipse
+# Public License 2.0 are satisfied: GNU General Public License, version 2
+# or later which is available at
+# https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+# SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
 
 # @file    personGenerator.py
 # @author  tarek chouaki
 # @date    2019-03-22
-# @version $Id$
 
 """
 This tool allows to generate flows of persons for a SUMO simulation which is currently not possible in SUMO route files.
@@ -50,13 +53,16 @@ Here is an example ``.pflow.xml`` :
 
 The example above allows to generate two flows of persons :
 
--The first flow consists of persons taking a bus from stop 1 to either stop 2 or stop 3 (with a 50% chance for each).
-The persons of this flow are spawned in 7 waves (equally separated in time) and each wave consists of 10 persons.
-For the persons going to bus stop 2, there's a 50% chance they'll stay there during 10 ticks.
-The route followed by the persons of this flow is defined separately in a ``<personRoute>`` element and referenced by its ID.
--The second flow consists of persons taking a bus from stop 3 to stop 1 and then stopping there for 50 ticks.
-The persons of this flow are spawned in periodic waves with 10 persons pere wave.
-The route followed by the persons is defined directly under the ``<personFlow>``
+- The first flow consists of persons taking a bus from stop 1 to either stop 2 or stop 3
+  (with a 50% chance for each). The persons of this flow are spawned in 7 waves (equally
+  separated in time) and each wave consists of 10 persons. For the persons going to bus
+  stop 2, there's a 50% chance they'll stay there during 10 ticks. The route followed by
+  the persons of this flow is defined separately in a ``<personRoute>`` element and
+  referenced by its ID.
+- The second flow consists of persons taking a bus from stop 3 to stop 1 and then
+  stopping there for 50 ticks. The persons of this flow are spawned in periodic waves
+  with 10 persons pere wave. The route followed by the persons is defined directly under
+  the ``<personFlow>``
 
 How to Use
 ----------

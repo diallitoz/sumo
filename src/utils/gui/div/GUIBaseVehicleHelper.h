@@ -1,26 +1,23 @@
 /****************************************************************************/
 // Eclipse SUMO, Simulation of Urban MObility; see https://eclipse.org/sumo
-// Copyright (C) 2001-2019 German Aerospace Center (DLR) and others.
-// This program and the accompanying materials
-// are made available under the terms of the Eclipse Public License v2.0
-// which accompanies this distribution, and is available at
-// http://www.eclipse.org/legal/epl-v20.html
-// SPDX-License-Identifier: EPL-2.0
+// Copyright (C) 2001-2020 German Aerospace Center (DLR) and others.
+// This program and the accompanying materials are made available under the
+// terms of the Eclipse Public License 2.0 which is available at
+// https://www.eclipse.org/legal/epl-2.0/
+// This Source Code may also be made available under the following Secondary
+// Licenses when the conditions for such availability set forth in the Eclipse
+// Public License 2.0 are satisfied: GNU General Public License, version 2
+// or later which is available at
+// https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+// SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
 /****************************************************************************/
 /// @file    GUIBaseVehicleHelper.h
 /// @author  Pablo Alvarez Lopez
 /// @date    Feb 2018
-/// @version $Id$
 ///
 // Functions used in GUIBaseVehicleHelper and GNEVehicle
 /****************************************************************************/
-#ifndef GUIBaseVehicleHelper_h
-#define GUIBaseVehicleHelper_h
-
-
-// ===========================================================================
-// included modules
-// ===========================================================================
+#pragma once
 #include <config.h>
 
 #include <string>
@@ -57,13 +54,8 @@ public:
             int carriageIndex = -1);
 
     /**@brief try to draw vehicle as raster image and return true if sucessful
-     * @param[in] length The custom length of the vehicle (defaults to the * length specified in the vehicle type if -1 is passed)
+     * @param[in] length The custom length of the vehicle
     */
-    static bool drawAction_drawVehicleAsImage(const GUIVisualizationSettings& s, const std::string& file, const GUIGlObject* o, const double width, double length = -1);
+    static bool drawAction_drawVehicleAsImage(const GUIVisualizationSettings& s, const std::string& file,
+            const GUIGlObject* o, const double width, double length);
 };
-
-
-#endif
-
-/****************************************************************************/
-

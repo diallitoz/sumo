@@ -1,11 +1,15 @@
 /****************************************************************************/
 // Eclipse SUMO, Simulation of Urban MObility; see https://eclipse.org/sumo
-// Copyright (C) 2001-2019 German Aerospace Center (DLR) and others.
-// This program and the accompanying materials
-// are made available under the terms of the Eclipse Public License v2.0
-// which accompanies this distribution, and is available at
-// http://www.eclipse.org/legal/epl-v20.html
-// SPDX-License-Identifier: EPL-2.0
+// Copyright (C) 2001-2020 German Aerospace Center (DLR) and others.
+// This program and the accompanying materials are made available under the
+// terms of the Eclipse Public License 2.0 which is available at
+// https://www.eclipse.org/legal/epl-2.0/
+// This Source Code may also be made available under the following Secondary
+// Licenses when the conditions for such availability set forth in the Eclipse
+// Public License 2.0 are satisfied: GNU General Public License, version 2
+// or later which is available at
+// https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+// SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
 /****************************************************************************/
 /// @file    SUMOVehicleClass.cpp
 /// @author  Daniel Krajzewicz
@@ -14,15 +18,9 @@
 /// @author  Walter Bamberger
 /// @author  Laura Bieker-Walz
 /// @date    2006-01-24
-/// @version $Id$
 ///
 // Definitions of SUMO vehicle classes and helper functions
 /****************************************************************************/
-
-
-// ===========================================================================
-// included modules
-// ===========================================================================
 #include <config.h>
 
 #include <string>
@@ -66,14 +64,13 @@ StringBijection<SUMOVehicleClass>::Entry sumoVehicleClassStringInitializer[] = {
     {"rail_urban",        SVC_RAIL_URBAN},
     {"rail_slow",         SVC_RAIL}, // !!! deprecated
     {"rail",              SVC_RAIL},
-    {"rail_fast",         SVC_RAIL_ELECTRIC}, // !!! deprecated
+    {"rail_fast",         SVC_RAIL_FAST},
     {"rail_electric",     SVC_RAIL_ELECTRIC},
     {"motorcycle",        SVC_MOTORCYCLE},
     {"moped",             SVC_MOPED},
     {"bicycle",           SVC_BICYCLE},
     {"pedestrian",        SVC_PEDESTRIAN},
     {"evehicle",          SVC_E_VEHICLE},
-    //{"automated",         SVC_AUTOMATED},
     {"ship",              SVC_SHIP},
     {"custom1",           SVC_CUSTOM1},
     {"custom2",           SVC_CUSTOM2}
@@ -143,9 +140,9 @@ static std::string vehicleClassNameAll = "all";
 // additional constants
 // ===========================================================================
 
-const int SUMOVehicleClass_MAX = SVC_CUSTOM2;
+const SUMOVehicleClass SUMOVehicleClass_MAX = SVC_CUSTOM2;
 
-const SVCPermissions SVCAll = 2 * SUMOVehicleClass_MAX - 1; // all relevant bits set to 1
+const SVCPermissions SVCAll = 2 * (int)SUMOVehicleClass_MAX - 1; // all relevant bits set to 1
 
 const SVCPermissions SVC_UNSPECIFIED = -1;
 
@@ -154,6 +151,10 @@ const std::string DEFAULT_VTYPE_ID("DEFAULT_VEHTYPE");
 const std::string DEFAULT_PEDTYPE_ID("DEFAULT_PEDTYPE");
 
 const std::string DEFAULT_BIKETYPE_ID("DEFAULT_BIKETYPE");
+
+const std::string DEFAULT_CONTAINERTYPE_ID("DEFAULT_CONTAINERTYPE");
+
+const std::string DEFAULT_TAXITYPE_ID("DEFAULT_TAXITYPE");
 
 const double DEFAULT_VEH_PROB(1.);
 
@@ -269,7 +270,7 @@ canParseVehicleClasses(const std::string& classes) {
 
 
 SVCPermissions
-parseVehicleClasses(const std::string& allowedS, const std::string& disallowedS) {
+parseVehicleClasses(const std::string& allowedS, const std::string& disallowedS, double networkVersion) {
     if (allowedS.size() == 0 && disallowedS.size() == 0) {
         return SVCAll;
     } else if (allowedS.size() > 0 && disallowedS.size() > 0) {
@@ -278,7 +279,7 @@ parseVehicleClasses(const std::string& allowedS, const std::string& disallowedS)
     } else if (allowedS.size() > 0) {
         return parseVehicleClasses(allowedS);
     } else {
-        return invertPermissions(parseVehicleClasses(disallowedS));
+        return invertPermissions(parseVehicleClasses(disallowedS) | (networkVersion < 1.3 ? SVC_RAIL_FAST : 0));
     }
 }
 
@@ -416,5 +417,45 @@ std::map<SVCPermissions, double> parseStopOffsets(const SUMOSAXAttributes& attrs
     return offsets;
 }
 
-/****************************************************************************/
 
+double
+getDefaultVehicleLength(const SUMOVehicleClass vc) {
+    switch (vc) {
+        case SVC_PEDESTRIAN:
+            return 0.215;
+        case SVC_BICYCLE:
+            return 1.6;
+        case SVC_MOPED:
+            return 2.1;
+        case SVC_MOTORCYCLE:
+            return 2.2;
+        case SVC_TRUCK:
+            return 7.1;
+        case SVC_TRAILER:
+            return 16.5;
+        case SVC_BUS:
+            return 12.;
+        case SVC_COACH:
+            return 14.;
+        case SVC_TRAM:
+            return 22.;
+        case SVC_RAIL_URBAN:
+            return 36.5 * 3;
+        case SVC_RAIL:
+            return 67.5 * 2;
+        case SVC_RAIL_ELECTRIC:
+        case SVC_RAIL_FAST:
+            return 25. * 8;
+        case SVC_DELIVERY:
+        case SVC_EMERGENCY:
+            return 6.5;
+        case SVC_SHIP:
+            return 17;
+        default:
+            return 5; /*4.3*/
+    }
+}
+
+
+
+/****************************************************************************/

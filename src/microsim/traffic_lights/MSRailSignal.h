@@ -1,40 +1,37 @@
 /****************************************************************************/
 // Eclipse SUMO, Simulation of Urban MObility; see https://eclipse.org/sumo
-// Copyright (C) 2002-2019 German Aerospace Center (DLR) and others.
-// This program and the accompanying materials
-// are made available under the terms of the Eclipse Public License v2.0
-// which accompanies this distribution, and is available at
-// http://www.eclipse.org/legal/epl-v20.html
-// SPDX-License-Identifier: EPL-2.0
+// Copyright (C) 2002-2020 German Aerospace Center (DLR) and others.
+// This program and the accompanying materials are made available under the
+// terms of the Eclipse Public License 2.0 which is available at
+// https://www.eclipse.org/legal/epl-2.0/
+// This Source Code may also be made available under the following Secondary
+// Licenses when the conditions for such availability set forth in the Eclipse
+// Public License 2.0 are satisfied: GNU General Public License, version 2
+// or later which is available at
+// https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+// SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
 /****************************************************************************/
 /// @file    MSRailSignal.h
 /// @author  Melanie Weber
 /// @author  Andreas Kendziorra
 /// @date    Jan 2015
-/// @version $Id$
 ///
 // A rail signal logic
 /****************************************************************************/
-#ifndef MSRailSignal_h
-#define MSRailSignal_h
-
-
-// ===========================================================================
-// included modules
-// ===========================================================================
+#pragma once
 #include <config.h>
 
-//#include <utility>
-//#include <vector>
-//#include <bitset>
-//#include <map>
-//#include <microsim/MSEventControl.h>
+#include <vector>
+#include <microsim/MSRoute.h>
 #include <microsim/traffic_lights/MSTrafficLightLogic.h>
-//#include "MSSimpleTrafficLightLogic.h"
-#include "MSPhaseDefinition.h"
-#include "MSTLLogicControl.h"
-//#include <microsim/output/MSInductLoop.h>
+#include <microsim/traffic_lights/MSTLLogicControl.h>
 
+
+// ===========================================================================
+// class declarations
+// ===========================================================================
+class MSLink;
+class MSPhaseDefinition;
 
 
 // ===========================================================================
@@ -51,9 +48,10 @@ public:
      * @param[in] id This tls' id
      * @param[in] programID This tls' sub-id (program id)
      * @param[in] parameters This tls' parameters
+     * @param[in] delay The time to wait before the first switch
      */
     MSRailSignal(MSTLLogicControl& tlcontrol,
-                 const std::string& id, const std::string& programID,
+                 const std::string& id, const std::string& programID, SUMOTime delay,
                  const std::map<std::string, std::string>& parameters);
 
 
@@ -96,8 +94,6 @@ public:
      *
      * @return The state actually required for this signal.
      */
-    bool conflictLaneOccupied(int index) const;
-    bool hasLinkConflict(int index) const;
 
     /// @brief updates the current phase of the signal
     void updateCurrentPhase();
@@ -201,56 +197,174 @@ public:
     }
     /// @}
 
+    /// @brief return vehicles that block the intersection/rail signal for vehicles that wish to pass the given linkIndex
+    VehicleVector getBlockingVehicles(int linkIndex);
+
+    /// @brief return vehicles that approach the intersection/rail signal and are in conflict with vehicles that wish to pass the given linkIndex
+    VehicleVector getRivalVehicles(int linkIndex);
+
+    /// @brief return vehicles that approach the intersection/rail signal and have priority over vehicles that wish to pass the given linkIndex
+    VehicleVector getPriorityVehicles(int linkIndex);
+
+    /// @brief write rail signal block output for all links and driveways
+    void writeBlocks(OutputDevice& od) const;
+
+    static bool hasOncomingRailTraffic(MSLink* link);
+
 protected:
 
-    /*  The conflict lanes for each link index
-     *  If any of them is occupied the signal must be red */
-    std::vector<std::vector<MSLane*> > myConflictLanes;
+    typedef std::pair<const SUMOVehicle* const, const MSLink::ApproachingVehicleInformation> Approaching;
+    typedef std::set<const MSLane*, ComparatorNumericalIdLess> LaneSet;
 
-    /* The conflict links for each link index
-     * Conflict resolution must be performed if vehicles are approaching the
-     * current link and any of the conflict links */
-    std::vector<std::vector<MSLink*> > myConflictLinks;
+    /*  The driveways (Fahrstrassen) for each link index
+     *  Each link index has at least one driveway
+     *  A driveway describes one possible route that passes the signal up
+     *  the next secure point
+     *  When a signal guards a switch (indirect guard) that signal stores two
+     *  or more driveways
+     */
+    struct DriveWay {
 
-    /* Conflict lanes for each conflictLink of the current link
-     * linkIndex -> conflictLinkIndex -> lanes
-     * They must only be checked if the approaching vehicle's route enters the
-     * bidirectional block beyond that conflichLink */
-    std::vector<std::vector<std::vector<MSLane*> > > myRouteConflictLanes;
+        /// @brief Constructor
+        DriveWay(int index) :
+            myIndex(index),
+            myMaxFlankLength(0),
+            myActive(nullptr)
+        {}
 
-    /* Conflict links for each conflictLink of the current link
-     * linkIndex -> conflictLinkIndex -> links
-     * They must only be checked if the approaching vehicle's route enters the
-     * bidirectional block beyond that conflictLink, then they are treated like
-     * regular conflictLinks */
-    std::vector<std::vector<std::vector<MSLink*> > > myRouteConflictLinks;
+        /// @brief index in the list of driveways
+        int myIndex;
 
-    /// Storage for rerouting times to avoid superfluous calls
-    mutable std::vector<std::pair<SUMOVehicle*, SUMOTime> > myLastRerouteAttempt;
+        /// @brief the maximum flank length searched while building this driveway
+        double myMaxFlankLength;
 
-    typedef std::set<MSLane*, ComparatorNumericalIdLess> LaneSet;
+        /// @brief whether the current signal is switched green for a train approaching this block
+        const SUMOVehicle* myActive;
 
-    /// @brief collect conflict lanes in step 1
-    void collectForwardBlock(MSLane* toLane, double length, std::vector<MSLane*>& forwardBlock, LaneSet& visited);
+        /// @brief list of lanes for matching against train routes
+        std::vector<const MSEdge*> myRoute;
 
-    /// @brief collect bidirectional conflict lanes in step 2
-    void collectBidiBlock(MSLane* toLane, double length, bool foundSwitch, std::vector<MSLane*>& bidiBlock, LaneSet& visited);
+        /* @brief the actual driveway part up to the next railsignal (halting position)
+         * This must be free of other trains */
+        std::vector<MSLane*> myForward;
 
-    /// @brief collect additional conflict lanes and conflict links in step 3
-    void collectConflictLinks(MSLane* toLane, double length,
-                              std::vector<MSLane*>& backwardBlock,
-                              std::vector<MSLink*>& conflictLinks,
-                              LaneSet& visited,
-                              bool checkFoes = false);
+        /* @brief the list of bidirectional edges that can enter the forward
+         * section and  which must also be free of traffic
+         * (up to the first element that could give protection) */
+        std::vector<MSLane*> myBidi;
 
-    /// @brief whether there are other controlled links from the same incoming lane
-    static bool hasAlternativeTrack(MSLink* link);
+        /* @brief the list of edges that merge with the forward section
+         * (found via backward search, up to the first element that could give protection) */
+        std::vector<const MSLane*> myFlank;
 
-    /// @brief whether there is an alternative track between the end of the forwardBlock and cLink
-    static bool hasAlternativeTrackBetween(const std::vector<MSLane*>& forwardBlock, MSLink* cLink);
+        /// @brief the lanes that must be clear of trains before this signal can switch to green
+        std::vector<const MSLane*> myConflictLanes;
+
+        /* @brief the list of switches that threaten the driveway and for which protection must be found
+         */
+        std::vector<MSLink*> myFlankSwitches;
+
+        /* @brief the list of (first) switches that could give protection from oncoming/flanking vehicles
+         * if any of them fails to do so, upstream search must be performed
+         * until protection or conflict is found
+         */
+        std::vector<MSLink*> myProtectingSwitches;
+
+        /* The conflict links for this block
+         * Conflict resolution must be performed if vehicles are approaching the
+         * current link and any of the conflict links */
+        std::vector<MSLink*> myConflictLinks;
+
+        /// @brief whether any of myConflictLanes is occupied (vehicles that are the target of a join must be ignored)
+        bool conflictLaneOccupied(const std::string& joinVehicle = "", bool store = true) const;
+
+        /// @brief attempt reserve this driveway for the given vehicle
+        bool reserve(const Approaching& closest, MSEdgeVector& occupied);
+
+        /// @brief Whether the approaching vehicle is prevent from driving by another vehicle approaching the given link
+        bool hasLinkConflict(const Approaching& closest, MSLink* foeLink) const;
+
+        /// @brief Whether veh must yield to the foe train
+        bool mustYield(const Approaching& veh, const Approaching& foe) const;
+
+        /// @brief Whether any of the conflict linkes have approaching vehicles
+        bool conflictLinkApproached() const;
+
+        /// @brief find protection for the given vehicle  starting at a switch
+        bool findProtection(const Approaching& veh, MSLink* link) const;
+
+        /// @brief Wether this driveway overlaps with the given one
+        bool overlap(const DriveWay& other) const;
+
+        /// @brief Write block items for this driveway
+        void writeBlocks(OutputDevice& od) const;
+
+        /* @brief determine route that identifies this driveway (a subset of the
+         * vehicle route)
+         * collects:
+         *   myRoute
+         *   myForward
+         *   myBidi
+         *   myFlankSwitches
+         *   myProtectingSwitches (at most 1 at the end of the bidi block)
+         */
+        void buildRoute(MSLink* origin, double length, MSRouteIterator next, MSRouteIterator end,
+                        LaneSet& visited);
+
+        /// @brief find switches that threathen this driveway
+        void checkFlanks(const std::vector<MSLane*>& lanes, const LaneSet& visited, bool allFoes);
+
+        /// @brief find links that cross the driveway without entering it
+        void checkCrossingFlanks(MSLink* dwLink, const LaneSet& visited);
+
+        /// @brief find upstream protection from the given link
+        void findFlankProtection(MSLink* link, double length, LaneSet& visited, MSLink* origLink);
+    };
+
+    /* The driveways for each link
+     */
+    struct LinkInfo {
+        /// @brief constructor
+        LinkInfo(MSLink* link);
+
+        MSLink* myLink;
+
+        /// @brief whether there is only a single DriveWay following this link
+        bool myUniqueDriveWay;
+
+        /// @brief all driveways immediately following this link
+        std::vector<DriveWay> myDriveways;
+
+        /// @brief return id for this railsignal-link
+        std::string getID() const;
+
+        /// @brief retrieve an existing Driveway or construct a new driveway based on the vehicles route
+        DriveWay& getDriveWay(const SUMOVehicle*);
+
+        /// @brief construct a new driveway by searching along the given route until all block structures are found
+        DriveWay& buildDriveWay(MSRouteIterator first, MSRouteIterator end);
+
+        /// @brief try rerouting vehicle if reservation failed
+        void reroute(SUMOVehicle* veh, const MSEdgeVector& occupied);
+
+        SUMOTime myLastRerouteTime;
+        SUMOVehicle* myLastRerouteVehicle;
+    };
+
+    /// @brief data storage for every link at this node (more than one when directly guarding a switch)
+    std::vector<LinkInfo> myLinkInfos;
+
+    /// @brief get the closest vehicle approaching the given link
+    static Approaching getClosest(MSLink* link);
 
     /// @brief return logicID_linkIndex
     static std::string getTLLinkID(MSLink* link);
+
+    /// @brief return logicID_linkIndex in a way that allows clicking in sumo-gui
+    static std::string getClickableTLLinkID(MSLink* link);
+
+    /// @brief print link descriptions
+    static std::string describeLinks(std::vector<MSLink*> links);
 
 protected:
 
@@ -263,12 +377,22 @@ protected:
     /// @brief The current phase
     MSPhaseDefinition myCurrentPhase;
 
+    /// @brief MSTrafficLightLogic requires that the phase index changes whenever signals change their state
+    int myPhaseIndex;
+
     static int myNumWarnings;
 
+protected:
+    /// @brief update vehicle lists for traci calls
+    void storeTraCIVehicles(int linkIndex);
+
+    /// @name traci result storage
+    //@{
+    static bool myStoreVehicles;
+    static VehicleVector myBlockingVehicles;
+    static VehicleVector myRivalVehicles;
+    static VehicleVector myPriorityVehicles;
+    //@}
+
+
 };
-
-
-#endif
-
-/****************************************************************************/
-
